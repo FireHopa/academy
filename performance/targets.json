@@ -1,0 +1,136 @@
+{
+  "$schema": "./targets.schema.json",
+  "schemaVersion": 1,
+  "nextBuild": {
+    "buildDirectory": "apps/web/.next",
+    "defaults": {
+      "javascriptBrotliBytes": 185000,
+      "cssBrotliBytes": 18000,
+      "totalBrotliBytes": 200000
+    },
+    "overrides": [
+      {
+        "match": "/login",
+        "javascriptBrotliBytes": 165000,
+        "cssBrotliBytes": 15000,
+        "totalBrotliBytes": 178000
+      },
+      {
+        "match": "/browse",
+        "javascriptBrotliBytes": 175000,
+        "cssBrotliBytes": 17000,
+        "totalBrotliBytes": 190000
+      },
+      {
+        "match": "/watch/*",
+        "javascriptBrotliBytes": 190000,
+        "cssBrotliBytes": 18000,
+        "totalBrotliBytes": 205000
+      },
+      {
+        "match": "/admin",
+        "javascriptBrotliBytes": 210000,
+        "cssBrotliBytes": 30000,
+        "totalBrotliBytes": 230000
+      },
+      {
+        "match": "/admin/*",
+        "javascriptBrotliBytes": 210000,
+        "cssBrotliBytes": 30000,
+        "totalBrotliBytes": 230000
+      }
+    ],
+    "assets": {
+      "largestInitialChunkBrotliBytes": 95000,
+      "totalCssRawBytes": 170000
+    },
+    "forbiddenInitialClientModules": [
+      "node_modules/@mux/mux-player-react",
+      "node_modules/@mux/mux-uploader-react"
+    ]
+  },
+  "webVitals": {
+    "percentile": 0.75,
+    "minimumSamples": 100,
+    "metrics": {
+      "LCP": { "maximum": 2500, "unit": "ms" },
+      "INP": { "maximum": 200, "unit": "ms" },
+      "CLS": { "maximum": 0.1, "unit": "score" },
+      "TTFB": { "maximum": 800, "unit": "ms" },
+      "FCP": { "maximum": 1800, "unit": "ms" }
+    }
+  },
+  "api": {
+    "baseUrlEnvironment": "PERF_API_BASE_URL",
+    "requestTimeoutMs": 5000,
+    "warmupRequests": 3,
+    "iterations": 30,
+    "concurrency": 5,
+    "maximumErrorRate": 0.01,
+    "login": {
+      "path": "/api/auth/login",
+      "emailEnvironment": "PERF_STUDENT_EMAIL",
+      "passwordEnvironment": "PERF_STUDENT_PASSWORD"
+    },
+    "adminLogin": {
+      "path": "/api/auth/login",
+      "emailEnvironment": "PERF_ADMIN_EMAIL",
+      "passwordEnvironment": "PERF_ADMIN_PASSWORD"
+    },
+    "flows": [
+      {
+        "name": "home",
+        "method": "GET",
+        "path": "/api/experience/home",
+        "p50Ms": 120,
+        "p95Ms": 300,
+        "p99Ms": 600
+      },
+      {
+        "name": "catalog",
+        "method": "GET",
+        "path": "/api/experience/catalog?page=1&limit=24",
+        "p50Ms": 120,
+        "p95Ms": 300,
+        "p99Ms": 600
+      },
+      {
+        "name": "library",
+        "method": "GET",
+        "path": "/api/experience/library?page=1&limit=24",
+        "p50Ms": 120,
+        "p95Ms": 300,
+        "p99Ms": 600
+      },
+      {
+        "name": "playback-bootstrap",
+        "method": "POST",
+        "path": "/api/playback/lessons/${PERF_LESSON_ID}/bootstrap",
+        "requiredEnvironment": "PERF_LESSON_ID",
+        "body": {
+          "deviceFingerprint": "performance-release-gate-001",
+          "deviceLabel": "Performance release gate"
+        },
+        "concurrency": 1,
+        "cleanup": {
+          "method": "POST",
+          "path": "/api/playback/sessions/${responseId}/end",
+          "responseIdPath": "playbackSession.id",
+          "body": {}
+        },
+        "p50Ms": 200,
+        "p95Ms": 500,
+        "p99Ms": 900
+      },
+      {
+        "name": "admin-dashboard",
+        "method": "GET",
+        "path": "/api/admin/dashboard",
+        "authProfile": "admin",
+        "p50Ms": 120,
+        "p95Ms": 300,
+        "p99Ms": 600
+      }
+    ]
+  }
+}

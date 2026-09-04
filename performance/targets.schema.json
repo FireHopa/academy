@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://academy-play.local/performance/targets.schema.json",
+  "title": "Academy Play performance targets",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "nextBuild", "webVitals", "api"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "nextBuild": {
+      "type": "object",
+      "required": ["buildDirectory", "defaults", "overrides", "assets", "forbiddenInitialClientModules"],
+      "properties": {
+        "buildDirectory": { "type": "string", "minLength": 1 },
+        "defaults": { "$ref": "#/$defs/routeBudget" },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              { "$ref": "#/$defs/routeBudget" },
+              {
+                "type": "object",
+                "required": ["match"],
+                "properties": { "match": { "type": "string", "minLength": 1 } }
+              }
+            ]
+          }
+        },
+        "assets": {
+          "type": "object",
+          "required": ["largestInitialChunkBrotliBytes", "totalCssRawBytes"],
+          "properties": {
+            "largestInitialChunkBrotliBytes": { "type": "integer", "minimum": 1 },
+            "totalCssRawBytes": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "forbiddenInitialClientModules": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "webVitals": {
+      "type": "object",
+      "required": ["percentile", "minimumSamples", "metrics"],
+      "properties": {
+        "percentile": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "minimumSamples": { "type": "integer", "minimum": 1 },
+        "metrics": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": ["maximum", "unit"],
+            "properties": {
+              "maximum": { "type": "number", "minimum": 0 },
+              "unit": { "enum": ["ms", "score"] }
+            }
+          }
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "required": ["baseUrlEnvironment", "requestTimeoutMs", "warmupRequests", "iterations", "concurrency", "maximumErrorRate", "login", "adminLogin", "flows"],
+      "properties": {
+        "baseUrlEnvironment": { "type": "string", "minLength": 1 },
+        "requestTimeoutMs": { "type": "integer", "minimum": 100 },
+        "warmupRequests": { "type": "integer", "minimum": 0 },
+        "iterations": { "type": "integer", "minimum": 1 },
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "maximumErrorRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "login": {
+          "type": "object",
+          "required": ["path", "emailEnvironment", "passwordEnvironment"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "emailEnvironment": { "type": "string", "minLength": 1 },
+            "passwordEnvironment": { "type": "string", "minLength": 1 }
+          }
+        },
+        "adminLogin": {
+          "type": "object",
+          "required": ["path", "emailEnvironment", "passwordEnvironment"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "emailEnvironment": { "type": "string", "minLength": 1 },
+            "passwordEnvironment": { "type": "string", "minLength": 1 }
+          }
+        },
+        "flows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "method", "path", "p50Ms", "p95Ms", "p99Ms"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "method": { "enum": ["GET", "POST"] },
+              "path": { "type": "string", "minLength": 1 },
+              "requiredEnvironment": { "type": "string", "minLength": 1 },
+              "authProfile": { "enum": ["student", "admin"] },
+              "concurrency": { "type": "integer", "minimum": 1 },
+              "body": { "type": ["object", "null"] },
+              "cleanup": {
+                "type": "object",
+                "required": ["method", "path", "responseIdPath"],
+                "properties": {
+                  "method": { "enum": ["POST", "DELETE"] },
+                  "path": { "type": "string", "minLength": 1 },
+                  "responseIdPath": { "type": "string", "minLength": 1 },
+                  "body": { "type": ["object", "null"] }
+                }
+              },
+              "p50Ms": { "type": "number", "minimum": 1 },
+              "p95Ms": { "type": "number", "minimum": 1 },
+              "p99Ms": { "type": "number", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "routeBudget": {
+      "type": "object",
+      "required": ["javascriptBrotliBytes", "cssBrotliBytes", "totalBrotliBytes"],
+      "properties": {
+        "javascriptBrotliBytes": { "type": "integer", "minimum": 1 },
+        "cssBrotliBytes": { "type": "integer", "minimum": 1 },
+        "totalBrotliBytes": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

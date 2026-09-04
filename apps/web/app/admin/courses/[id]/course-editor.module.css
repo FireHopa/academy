@@ -1,0 +1,71 @@
+.moduleClosed :global(.module-admin-head) {
+  border-bottom-color: transparent;
+}
+
+.moduleToggle {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moduleCopy {
+  min-width: 0;
+}
+
+.moduleTitleText {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 1.17em;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moduleSummary {
+  display: block;
+  margin-top: 5px;
+  color: var(--admin-muted, #667085);
+  font-size: 11px;
+}
+
+.moduleChevron {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--admin-border-strong, #d0d5dd);
+  border-radius: 8px;
+  color: var(--admin-muted, #667085);
+  transition: transform .16s ease, color .16s ease, border-color .16s ease;
+}
+
+.moduleChevronOpen {
+  transform: rotate(90deg);
+  border-color: #84adff;
+  color: var(--admin-primary, #2563eb);
+}
+
+.moduleBody {
+  animation: moduleOpen .16s ease-out;
+}
+
+@keyframes moduleOpen {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 720px) {
+  .moduleToggle {
+    width: 100%;
+  }
+}

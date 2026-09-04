@@ -1,0 +1,2 @@
+ALTER TABLE "WatchSession"
+ADD COLUMN "maxCreditedPositionSec" INTEGER NOT NULL DEFAULT 0;

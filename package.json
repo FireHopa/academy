@@ -1,0 +1,48 @@
+{
+  "name": "academy-play",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @academy/web",
+    "dev:api": "npm run start:dev -w @academy/api",
+    "dev:worker": "npm run start:worker:dev -w @academy/api",
+    "build": "npm run build -w @academy/web && npm run build -w @academy/api",
+    "db:validate": "prisma validate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
+    "db:baseline:existing": "bash ./scripts/baseline-existing-database.sh",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx apps/api/src/seed.ts",
+    "test": "npm run test:api",
+    "test:api": "TSX_TSCONFIG_PATH=apps/api/tsconfig.test.json node --import tsx --test apps/api/test/*.test.ts",
+    "test:api:coverage": "TSX_TSCONFIG_PATH=apps/api/tsconfig.test.json node --import tsx --test --experimental-test-coverage --test-coverage-lines=50 --test-coverage-branches=50 --test-coverage-functions=50 apps/api/test/*.test.ts",
+    "test:typecheck": "tsc -p apps/api/tsconfig.test.json --noEmit",
+    "load:sessions": "tsx scripts/performance/create-load-sessions.ts",
+    "load:test": "k6 run load-tests/academy-students.js",
+    "test:performance": "node --test scripts/performance/performance-tools.test.mjs",
+    "test:infra-security": "node scripts/test-compose-security.mjs",
+    "performance:build": "node scripts/performance/check-next-build.mjs --output .performance-results/next-build.json",
+    "performance:api": "node scripts/performance/check-api-slo.mjs --output .performance-results/api-slo.json",
+    "performance:web-vitals": "node scripts/performance/check-web-vitals.mjs --output .performance-results/web-vitals.json",
+    "performance:gate": "node scripts/performance/release-gate.mjs",
+    "performance:gate:production": "node scripts/performance/release-gate.mjs --production",
+    "postinstall": "prisma generate",
+    "linux:setup": "bash ./scripts/setup-linux.sh",
+    "linux:dev": "bash ./scripts/dev-linux.sh",
+    "linux:reset": "bash ./scripts/reset-linux.sh",
+    "test:themembers-webhook": "bash ./scripts/test-themembers-webhook.sh"
+  },
+  "devDependencies": {
+    "prisma": "7.7.0",
+    "tsx": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=22 <25",
+    "npm": ">=10"
+  },
+  "version": "10.0.26"
+}
