@@ -67,6 +67,7 @@ enum MaterialType {
 enum VideoProvider {
   PANDA
   MUX
+  YOUTUBE
 }
 
 enum IntegrationProvider {

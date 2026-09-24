@@ -57,6 +57,26 @@ test("Panda órfão remove somente o registro local e preserva a mídia remota",
   assert.equal(deleteMany.calls.length, 1);
 });
 
+
+test("YouTube órfão remove somente o registro local e nunca tenta excluir mídia remota", async () => {
+  const deleteAsset = recorded(async () => undefined);
+  const { service, deleteMany } = lifecycle([{
+    id: "youtube-1",
+    provider: "YOUTUBE",
+    providerAssetId: "dQw4w9WgXcQ",
+    metadata: { lifecycle: { remoteOwned: false, source: "youtube-url" } },
+    updatedAt: oldDate,
+  }], {}, { deleteAsset });
+
+  const result = await service.cleanupOrphans();
+
+  assert.equal(result.deletedLocal, 1);
+  assert.equal(result.preservedYoutubeRemote, 1);
+  assert.equal(result.deletedRemote, 0);
+  assert.equal(deleteAsset.calls.length, 0);
+  assert.equal(deleteMany.calls.length, 1);
+});
+
 test("Mux pertencente ao Academy é removido remotamente antes do registro local", async () => {
   const deleteAsset = recorded(async () => undefined);
   const asset = {
@@ -147,7 +167,7 @@ test("desvinculação reinicia o período de segurança sem IDs duplicados", asy
 });
 
 test("status separa órfãos Mux administrados dos que exigem revisão", async () => {
-  const values = [7, 4, 2, 5, 3];
+  const values = [7, 4, 2, 5, 1, 3];
   const count = recorded(async () => values.shift());
   const { service } = lifecycle([], { count });
 
@@ -158,6 +178,7 @@ test("status separa órfãos Mux administrados dos que exigem revisão", async (
     eligible: 4,
     panda: 2,
     mux: 5,
+    youtube: 1,
     muxManaged: 3,
     muxManualReview: 2,
     graceHours: 24,

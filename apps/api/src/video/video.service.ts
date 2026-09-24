@@ -15,6 +15,7 @@ import type { Request } from "express";
 import { PlaybackSessionService, type DeviceInput } from "./playback-session.service";
 import { PandaVideoProvider } from "./providers/panda-video.provider";
 import { MuxVideoProvider } from "./providers/mux-video.provider";
+import { YoutubeVideoProvider } from "./providers/youtube-video.provider";
 import type { ProviderVideo } from "./providers/video-provider.types";
 import { academyManagedMuxMetadata, VideoAssetLifecycleService } from "./video-asset-lifecycle.service";
 
@@ -40,6 +41,7 @@ export class VideoService {
     private readonly panda: PandaVideoProvider,
     private readonly mux: MuxVideoProvider,
     @Optional() private readonly lifecycle?: VideoAssetLifecycleService,
+    @Optional() private readonly youtube?: YoutubeVideoProvider,
   ) {}
 
   configuredProvider() {
@@ -52,6 +54,7 @@ export class VideoService {
       active: this.configuredProvider(),
       panda: this.panda.configurationStatus(),
       mux: { configured: this.mux.configured() },
+      youtube: { enabled: Boolean(this.youtube) },
     };
   }
 
@@ -141,6 +144,28 @@ export class VideoService {
     const video = await this.panda.getVideo(lesson.videoResource.providerAssetId);
     const asset = await this.upsertVideoAsset(video);
     await this.prisma.lesson.update({ where: { id: lessonId }, data: { videoStatus: asset.status, videoError: asset.error, durationSec: asset.durationSec } });
+    return this.getAdminVideoStatus(lessonId);
+  }
+
+  async attachYoutubeVideo(lessonId: string, url: string, durationSec: number) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, select: { id: true, videoResourceId: true } });
+    if (!lesson) throw new NotFoundException("Aula não encontrada");
+    if (!this.youtube) throw new ServiceUnavailableException("Integração YouTube indisponível");
+    const video = this.youtube.fromUrl(url, durationSec);
+    const asset = await this.upsertVideoAsset(video);
+    await this.lifecycle?.markDetached([lesson.videoResourceId]);
+    await this.prisma.lesson.update({
+      where: { id: lessonId },
+      data: {
+        videoResourceId: asset.id,
+        videoStatus: "READY",
+        videoError: null,
+        durationSec: asset.durationSec,
+        videoUploadId: null,
+        videoAssetId: null,
+        videoPlaybackId: null,
+      },
+    });
     return this.getAdminVideoStatus(lessonId);
   }
 
@@ -356,6 +381,12 @@ export class VideoService {
           error: lesson.videoResource.error,
           metadata: (lesson.videoResource.metadata as Record<string, unknown> | null) ?? null,
         }, identity, playbackSession.session.id);
+      } else if (lesson.videoResource?.provider === "YOUTUBE") {
+        if (!this.youtube) throw new ServiceUnavailableException("Integração YouTube indisponível");
+        playback = this.youtube.buildPlayback({
+          providerAssetId: lesson.videoResource.providerAssetId,
+          providerExternalId: lesson.videoResource.providerExternalId,
+        });
       } else {
         const playbackId = lesson.videoResource?.provider === "MUX" ? lesson.videoResource.providerExternalId : lesson.videoPlaybackId;
         if (!playbackId) throw new ServiceUnavailableException("Playback Mux não configurado");

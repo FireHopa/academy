@@ -10,6 +10,7 @@ type Chapter = { id:string; title:string; startSec:number };
 type Material = { id:string; title:string; type:"PDF"|"LINK"|"CHECKLIST"|"SPREADSHEET"|"PROMPT"|"FILE"; url:string };
 type LessonContent = {
   id:string; title:string; description?:string|null; durationSec?:number|null; published:boolean; videoStatus:string;
+  videoResource?:{provider:"PANDA"|"MUX"|"YOUTUBE"}|null;
   module:{id:string;title:string;course:{id:string;title:string;slug:string}};
   chapters:Chapter[]; materials:Material[]; transcript?:{content:string;language:string}|null;
 };
@@ -60,7 +61,7 @@ export default function LessonContentEditor({params}:{params:Promise<{id:string}
 
   if(!lesson)return <p>{error||"Carregando aula..."}</p>;
   return <>
-    <div className="editor-head"><div><Link className="back-link" href={`/admin/courses/${lesson.module.course.id}`}>← <GoogleText>{lesson.module.course.title}</GoogleText></Link><div className="eyebrow">Editar aula</div><h1><GoogleText>{lesson.title}</GoogleText></h1><p><GoogleText>{lesson.module.title}</GoogleText> · {lesson.videoStatus==="READY"?"vídeo DRM pronto":"vídeo em preparação"}</p></div><button className="btn btn-primary" onClick={()=>(document.getElementById("lesson-content-form") as HTMLFormElement | null)?.requestSubmit()} disabled={saving}>{saving?"Salvando...":"Salvar aula"}</button></div>
+    <div className="editor-head"><div><Link className="back-link" href={`/admin/courses/${lesson.module.course.id}`}>← <GoogleText>{lesson.module.course.title}</GoogleText></Link><div className="eyebrow">Editar aula</div><h1><GoogleText>{lesson.title}</GoogleText></h1><p><GoogleText>{lesson.module.title}</GoogleText> · {lesson.videoStatus==="READY"?(lesson.videoResource?.provider==="YOUTUBE"?"vídeo YouTube pronto":"vídeo DRM pronto"):"vídeo em preparação"}</p></div><button className="btn btn-primary" onClick={()=>(document.getElementById("lesson-content-form") as HTMLFormElement | null)?.requestSubmit()} disabled={saving}>{saving?"Salvando...":"Salvar aula"}</button></div>
     {error&&<div className="form-error">{error}</div>}{saved&&<div className="form-success">Aula salva.</div>}
     <div className="lesson-editor-layout">
       <form id="lesson-content-form" className="lesson-content-admin" onSubmit={save}>

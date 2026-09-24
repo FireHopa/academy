@@ -229,6 +229,7 @@ export class AdminService {
         chapters: { orderBy: { position: "asc" } },
         materials: { orderBy: { position: "asc" } },
         transcript: true,
+        videoResource: { select: { provider: true } },
         module: { include: { course: { select: { id: true, title: true, slug: true } } } },
       },
     });

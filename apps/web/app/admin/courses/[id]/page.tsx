@@ -23,7 +23,7 @@ type Lesson = {
   videoPlaybackId?: string | null;
   videoStatus: "EMPTY" | "UPLOADING" | "PROCESSING" | "READY" | "ERROR";
   videoError?: string | null;
-  videoResource?: { id:string; provider:"PANDA"|"MUX"; providerAssetId:string; thumbnailUrl?:string|null; status?:string; durationSec?:number|null; error?:string|null } | null;
+  videoResource?: { id:string; provider:"PANDA"|"MUX"|"YOUTUBE"; providerAssetId:string; thumbnailUrl?:string|null; status?:string; durationSec?:number|null; error?:string|null } | null;
 };
 
 type CourseModule = {
@@ -395,7 +395,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
                       <div className="lesson-order">{lessonIndex + 1}</div>
                       <div className="lesson-admin-main">
                         <b><GoogleText>{lesson.title}</GoogleText></b>
-                        <span>{lesson.published ? "Aula publicada" : "Aula em rascunho"} · {lesson.videoStatus === "READY" ? "vídeo DRM pronto" : lesson.videoStatus === "PROCESSING" ? "vídeo processando" : lesson.videoStatus === "UPLOADING" ? "upload iniciado" : lesson.videoStatus === "ERROR" ? "erro no vídeo" : "sem vídeo"}</span>
+                        <span>{lesson.published ? "Aula publicada" : "Aula em rascunho"} · {lesson.videoStatus === "READY" ? (lesson.videoResource?.provider === "YOUTUBE" ? "vídeo YouTube pronto" : "vídeo DRM pronto") : lesson.videoStatus === "PROCESSING" ? "vídeo processando" : lesson.videoStatus === "UPLOADING" ? "upload iniciado" : lesson.videoStatus === "ERROR" ? "erro no vídeo" : "sem vídeo"}</span>
                       </div>
                       <div className="compact-actions lesson-secondary-actions">
                         <button type="button" onClick={() => renameLesson(lesson)}>Renomear aula</button>

@@ -1,4 +1,4 @@
-export type VideoProviderName = "PANDA" | "MUX";
+export type VideoProviderName = "PANDA" | "MUX" | "YOUTUBE";
 
 export type ProviderVideoStatus = "EMPTY" | "UPLOADING" | "PROCESSING" | "READY" | "ERROR";
 
@@ -31,4 +31,9 @@ export type ProviderPlayback =
       provider: "MUX";
       playbackId: string;
       tokens: { playback: string; drm: string };
+    }
+  | {
+      provider: "YOUTUBE";
+      videoId: string;
+      embedUrl: string;
     };
