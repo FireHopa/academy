@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 
 const MuxUploader = lazy(() => import("@mux/mux-uploader-react"));
 
-type VideoProvider = "PANDA" | "MUX" | "YOUTUBE";
+type VideoProvider = "PANDA" | "MUX" | "YOUTUBE" | "VIMEO";
 type VideoState = {
   provider?: VideoProvider | null;
   videoStatus: "EMPTY" | "UPLOADING" | "PROCESSING" | "READY" | "ERROR";
@@ -157,6 +157,7 @@ export default function VideoUploader({ lessonId, initial, integration, onChange
   const [pandaStatus, setPandaStatus] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [youtubeChecking, setYoutubeChecking] = useState(false);
+  const [externalUrl, setExternalUrl] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeProvider = integration?.video.active ?? "PANDA";
@@ -239,6 +240,19 @@ export default function VideoUploader({ lessonId, initial, integration, onChange
     }
   }
 
+  async function attachExternalVideo() {
+    if (!externalUrl.trim() || busy) return;
+    setBusy(true); setError("");
+    try {
+      const next = await apiFetch<VideoState>(`/admin/lessons/${lessonId}/video/url/attach`, {
+        method: "POST", body: JSON.stringify({ url: externalUrl.trim() }),
+      });
+      setState(next); setExternalUrl(""); setLibrary(null); onChanged?.();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível vincular o vídeo.");
+    } finally { setBusy(false); }
+  }
+
   async function refreshPanda() {
     setBusy(true);
     try {
@@ -255,7 +269,7 @@ export default function VideoUploader({ lessonId, initial, integration, onChange
       ? "Desvincular este vídeo da aula? O arquivo NÃO será apagado do Panda."
       : currentProvider === "YOUTUBE"
         ? "Desvincular este vídeo do YouTube da aula? O vídeo no YouTube não será alterado."
-        : "Remover este vídeo da aula?";
+        : currentProvider === "VIMEO" ? "Desvincular este vídeo da aula? O vídeo no Vimeo não será alterado." : "Remover este vídeo da aula?";
     if (!window.confirm(message)) return;
     setBusy(true); setError("");
     try {
@@ -302,6 +316,15 @@ export default function VideoUploader({ lessonId, initial, integration, onChange
 
       <div className="video-source-divider"><span>ou</span></div>
       <div className="youtube-url-picker">
+        <div className="video-source-title"><strong>Panda ou Vimeo</strong><span>Cole a URL do vídeo</span></div>
+        <div className="inline-form youtube-url-form">
+          <input aria-label="URL do vídeo Panda ou Vimeo" value={externalUrl} onChange={e => { setExternalUrl(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); attachExternalVideo(); } }} placeholder="https://player...pandavideo.com.br/embed/?v=... ou https://vimeo.com/..." maxLength={1000} />
+          <button type="button" className="btn btn-secondary" onClick={attachExternalVideo} disabled={busy || !externalUrl.trim()}>{busy ? "Validando vídeo..." : "Vincular vídeo"}</button>
+        </div>
+        <p className="muted youtube-help">Panda: copie o link de incorporação, mesmo que o título não apareça na busca. Vimeo: use o link completo e permita a incorporação neste site.</p>
+      </div>
+      <div className="video-source-divider"><span>ou</span></div>
+      <div className="youtube-url-picker">
         <div className="video-source-title"><strong>YouTube</strong><span>Cole a URL do vídeo</span></div>
         <div className="inline-form youtube-url-form">
           <input value={youtubeUrl} onChange={e => { setYoutubeUrl(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); attachYoutube(); } }} placeholder="https://www.youtube.com/watch?v=..." maxLength={500} />
@@ -328,6 +351,6 @@ export default function VideoUploader({ lessonId, initial, integration, onChange
 
     {endpoint && <div className="mux-uploader-wrap"><Suspense fallback={<div className="video-processing">Carregando componente de upload...</div>}><MuxUploader endpoint={endpoint} pausable onSuccess={() => { setEndpoint(null); setState({ ...state, videoStatus: "PROCESSING" }); startPolling(); }} onUploadError={(event) => setError((event as CustomEvent)?.detail?.message || "Falha no upload")} /></Suspense></div>}
 
-    {state.videoStatus !== "EMPTY" && <div className="video-actions">{currentProvider === "PANDA" && <button type="button" className="mini-button" onClick={refreshPanda} disabled={busy}>Atualizar do Panda</button>}<button type="button" className="danger-text" disabled={busy} onClick={removeVideo}>{currentProvider === "PANDA" || currentProvider === "YOUTUBE" ? "Desvincular vídeo" : "Remover vídeo"}</button></div>}
+    {state.videoStatus !== "EMPTY" && <div className="video-actions">{currentProvider === "PANDA" && <button type="button" className="mini-button" onClick={refreshPanda} disabled={busy}>Atualizar do Panda</button>}<button type="button" className="danger-text" disabled={busy} onClick={removeVideo}>{currentProvider === "PANDA" || currentProvider === "YOUTUBE" || currentProvider === "VIMEO" ? "Desvincular vídeo" : "Remover vídeo"}</button></div>}
   </div>;
 }

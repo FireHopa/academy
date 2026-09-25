@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
+    "deploy:safe": "npm run db:migrate:deploy && npm run build",
     "db:baseline:existing": "bash ./scripts/baseline-existing-database.sh",
     "db:studio": "prisma studio",
     "db:seed": "tsx apps/api/src/seed.ts",

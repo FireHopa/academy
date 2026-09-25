@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { YoutubeVideoProvider, parseYouTubeVideoId } from "../src/video/providers/youtube-video.provider";
+import { VideoProvider } from "../src/generated/prisma/enums";
 
 test("parser aceita formatos comuns de URL do YouTube", () => {
   const id = "dQw4w9WgXcQ";
@@ -30,4 +31,8 @@ test("provider normaliza asset do YouTube e cria playback incorporado", () => {
   const playback = provider.buildPlayback({ providerAssetId: "dQw4w9WgXcQ" });
   assert.equal(playback.provider, "YOUTUBE");
   if (playback.provider === "YOUTUBE") assert.equal(playback.videoId, "dQw4w9WgXcQ");
+});
+
+test("Prisma Client gerado conhece o provider YOUTUBE", () => {
+  assert.equal(VideoProvider.YOUTUBE, "YOUTUBE");
 });

@@ -10,6 +10,7 @@ import { CourseCategoriesDto, CreateCategoryDto, CreateLearningPathDto, PathCour
 import { LessonContentDto } from "./dto/content.dto";
 import { CreateStudentDto, GrantEnrollmentDto, ImportStudentsDto, SendNotificationDto, StudentStatusDto, UpdateEnrollmentDto } from "./dto/student.dto";
 import { AttachPandaVideoDto } from "../video/dto/panda-video.dto";
+import { AttachVideoUrlDto } from "../video/dto/video-url.dto";
 import { AttachYoutubeVideoDto } from "../video/dto/youtube-video.dto";
 import { MAX_IMAGE_UPLOAD_BYTES, type UploadedImageFile } from "../media/image-storage.service";
 import { createHash } from "node:crypto";
@@ -118,6 +119,8 @@ export class AdminController {
   @AuditAction({ action: "lesson.video.panda.refresh", entityType: "LESSON", entityIdParam: "id", snapshot: true, captureRequest: false })
   @Post("lessons/:id/video/panda/refresh") refreshPandaVideo(@Param("id") id: string) { return this.video.refreshPandaVideo(id); }
   @AuditAction({ action: "lesson.video.youtube.attach", entityType: "LESSON", entityIdParam: "id", snapshot: true })
+  @Post("lessons/:id/video/url/attach") attachVideoUrl(@Param("id") id: string, @Body() body: AttachVideoUrlDto) { return this.video.attachVideoUrl(id, body.url); }
+
   @Post("lessons/:id/video/youtube/attach") attachYoutubeVideo(@Param("id") id: string, @Body() body: AttachYoutubeVideoDto) { return this.video.attachYoutubeVideo(id, body.url, body.durationSec); }
   @Get("lessons/:id/video/status") videoStatus(@Param("id") id: string) { return this.video.getAdminVideoStatus(id); }
   @AuditAction({ action: "lesson.video.remove", entityType: "LESSON", entityIdParam: "id", snapshot: true })

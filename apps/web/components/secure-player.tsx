@@ -6,12 +6,15 @@ import { GoogleText } from "@/components/google-text";
 import { ApiError, API_URL, apiFetch } from "@/lib/api";
 import { getDeviceLabel, getOrCreateDeviceFingerprint } from "@/lib/device";
 
+import { loadVimeoPlayer, type VimeoPlayer } from "@/lib/vimeo-player";
+
 const MuxPlayer = lazy(() => import("@mux/mux-player-react"));
 
 type Playback =
   | { provider: "PANDA"; playerUrl: string; videoExternalId: string }
   | { provider: "MUX"; playbackId: string; tokens: { playback: string; drm: string } }
-  | { provider: "YOUTUBE"; videoId: string; embedUrl: string };
+  | { provider: "YOUTUBE"; videoId: string; embedUrl: string }
+  | { provider: "VIMEO"; videoId: string; embedUrl: string };
 type Access = {
   playback: Playback;
   viewer: { id: string; name: string; email: string };
@@ -43,6 +46,7 @@ function TranscriptText({content,query}:{content:string;query:string}){const par
 
 export default function SecurePlayer({ lessonId }: { lessonId: string }) {
   const [data,setData]=useState<Access|null>(null);const [resources,setResources]=useState<LessonResources|null>(null);const [error,setError]=useState("");const [errorCode,setErrorCode]=useState<string|undefined>();const [conflict,setConflict]=useState<ConflictState|null>(null);const [saving,setSaving]=useState(false);const [takingOver,setTakingOver]=useState(false);const [tab,setTab]=useState<"chapters"|"materials"|"transcript">("chapters");const [transcriptQuery,setTranscriptQuery]=useState("");const [certificateCode,setCertificateCode]=useState<string|null>(null);
+  const vimeoRef=useRef<HTMLIFrameElement|null>(null);const vimeoPlayerRef=useRef<VimeoPlayer|null>(null);
   const lastSaved=useRef(0);const lastPosition=useRef(0);const muxRef=useRef<any>(null);const pandaRef=useRef<HTMLIFrameElement|null>(null);const youtubeHostRef=useRef<HTMLDivElement|null>(null);const youtubePlayerRef=useRef<any>(null);const sessionIdRef=useRef<string|null>(null);const heartbeatFailures=useRef(0);const resumeApplied=useRef(false);
   const devicePayload=useCallback(()=>({deviceFingerprint:getOrCreateDeviceFingerprint(),deviceLabel:getDeviceLabel()}),[]);
 
@@ -50,7 +54,7 @@ export default function SecurePlayer({ lessonId }: { lessonId: string }) {
   useEffect(()=>{setData(null);setResources(null);setCertificateCode(null);setTranscriptQuery("");resumeApplied.current=false;openPlayback(false);},[openPlayback]);
 
   const endSession=useCallback((sessionId:string|null)=>{if(!sessionId)return;fetch(`${API_URL}/api/playback/sessions/${sessionId}/end`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:"{}",keepalive:true}).catch(()=>{});},[]);
-  const pausePlayer=useCallback(()=>{if(data?.playback.provider==="PANDA"){try{const origin=new URL(data.playback.playerUrl).origin;pandaRef.current?.contentWindow?.postMessage({type:"pause"},origin);}catch{}}else if(data?.playback.provider==="YOUTUBE"){try{youtubePlayerRef.current?.pauseVideo?.();}catch{}}else{try{muxRef.current?.pause?.();}catch{}}},[data]);
+  const pausePlayer=useCallback(()=>{if(data?.playback.provider==="PANDA"){try{const origin=new URL(data.playback.playerUrl).origin;pandaRef.current?.contentWindow?.postMessage({type:"pause"},origin);}catch{}}else if(data?.playback.provider==="YOUTUBE"){try{youtubePlayerRef.current?.pauseVideo?.();}catch{}}else if(data?.playback.provider==="VIMEO"){void vimeoPlayerRef.current?.pause().catch(()=>{});}else{try{muxRef.current?.pause?.();}catch{}}},[data]);
 
   useEffect(()=>{if(!data)return;const sessionId=data.playbackSession.id;sessionIdRef.current=sessionId;const heartbeatMs=Math.max(10000,data.playbackSession.heartbeatSec*1000);const heartbeat=async()=>{try{await apiFetch(`/playback/sessions/${sessionId}/heartbeat`,{method:"POST",body:JSON.stringify({positionSec:Math.floor(lastPosition.current)})});heartbeatFailures.current=0;}catch(e){const authFailure=e instanceof ApiError&&(e.status===401||e.status===403||e.code==="PLAYBACK_SESSION_ENDED");heartbeatFailures.current+=1;if(!authFailure&&heartbeatFailures.current<3)return;pausePlayer();sessionIdRef.current=null;setData(null);setErrorCode(e instanceof ApiError?e.code:"PLAYBACK_SESSION_ENDED");setError(e instanceof Error?e.message:"Esta reprodução perdeu a autorização.");}};const timer=window.setInterval(heartbeat,heartbeatMs);const onPageHide=()=>endSession(sessionId);window.addEventListener("pagehide",onPageHide);return()=>{window.clearInterval(timer);window.removeEventListener("pagehide",onPageHide);endSession(sessionId);if(sessionIdRef.current===sessionId)sessionIdRef.current=null;};},[data,endSession,pausePlayer]);
 
@@ -62,8 +66,47 @@ export default function SecurePlayer({ lessonId }: { lessonId: string }) {
 
   useEffect(()=>{if(!data||data.playback.provider!=="YOUTUBE"||!youtubeHostRef.current)return;const youtubePlayback=data.playback;const lessonDurationSec=data.lesson.durationSec||0;let disposed=false;let timer:number|undefined;let player:any=null;loadYoutubePlayerApi().then((YT:any)=>{if(disposed||!youtubeHostRef.current)return;player=new YT.Player(youtubeHostRef.current,{videoId:youtubePlayback.videoId,playerVars:{playsinline:1,rel:0,enablejsapi:1,origin:window.location.origin},events:{onReady:(event:any)=>{youtubePlayerRef.current=event.target;const duration=Number(event.target.getDuration())||lessonDurationSec;const resume=resources?.progress&&!resources.progress.completed?resources.progress.positionSec:0;if(!resumeApplied.current&&resume>5&&(!duration||resume<duration-10)){event.target.seekTo(resume,true);resumeApplied.current=true;}timer=window.setInterval(()=>{try{const current=Number(event.target.getCurrentTime())||0;const total=Number(event.target.getDuration())||lessonDurationSec;lastPosition.current=current;if(event.target.getPlayerState()===YT.PlayerState.PLAYING)persistProgress(current,total);}catch{}},1000);},onStateChange:(event:any)=>{if(event.data===YT.PlayerState.ENDED){const duration=Number(event.target.getDuration())||lessonDurationSec||lastPosition.current;persistProgress(duration,duration,true);}},onError:()=>{setErrorCode("YOUTUBE_PLAYBACK_ERROR");setError("O YouTube não permitiu reproduzir este vídeo. Verifique se ele ainda está disponível e com incorporação habilitada.");}}});youtubePlayerRef.current=player;}).catch(error=>{if(!disposed){setErrorCode("YOUTUBE_PLAYBACK_ERROR");setError(error instanceof Error?error.message:"Não foi possível carregar o player do YouTube.");}});return()=>{disposed=true;if(timer)window.clearInterval(timer);if(youtubePlayerRef.current===player)youtubePlayerRef.current=null;try{player?.destroy?.();}catch{}};},[data]);
 
+  const progressHandler = useRef(persistProgress);
+  progressHandler.current = persistProgress;
+  useEffect(() => {
+    if (!data || data.playback.provider !== "VIMEO" || !vimeoRef.current) return;
+    const frame = vimeoRef.current;
+    let disposed = false;
+    let player: VimeoPlayer | null = null;
+    const onTime = (event: { seconds: number; duration: number }) => {
+      if (!disposed) void progressHandler.current(event.seconds, event.duration);
+    };
+    const onEnded = (event: { seconds: number; duration: number }) => {
+      if (!disposed) void progressHandler.current(event.duration || event.seconds, event.duration, true);
+    };
+    const onError = () => {
+      if (!disposed) { setErrorCode("VIMEO_PLAYBACK_ERROR"); setError("O Vimeo não permitiu reproduzir este vídeo. Confira o link e a permissão de incorporação neste site."); }
+    };
+    loadVimeoPlayer().then(async api => {
+      if (disposed) return;
+      player = new api.Player(frame);
+      vimeoPlayerRef.current = player;
+      player.on("timeupdate", onTime); player.on("ended", onEnded); player.on("error", onError);
+      await player.ready();
+      if (disposed) return;
+      const duration = await player.getDuration();
+      const resume = data.resources.progress && !data.resources.progress.completed ? data.resources.progress.positionSec : 0;
+      if (!disposed && !resumeApplied.current && resume > 5 && resume < duration - 10) {
+        await player.setCurrentTime(resume); resumeApplied.current = true;
+      }
+    }).catch(onError);
+    return () => {
+      disposed = true;
+      if (player) {
+        player.off("timeupdate", onTime); player.off("ended", onEnded); player.off("error", onError);
+        void player.pause().catch(() => {});
+        if (vimeoPlayerRef.current === player) vimeoPlayerRef.current = null;
+      }
+    };
+  }, [data]);
+
   const watermark=useMemo(()=>data?`${data.viewer.name} · ${data.viewer.email} · ID ${data.viewer.id}`:"",[data]);
-  function seek(startSec:number){if(!data)return;if(data.playback.provider==="PANDA"){try{const origin=new URL(data.playback.playerUrl).origin;pandaRef.current?.contentWindow?.postMessage({type:"currentTime",parameter:startSec},origin);pandaRef.current?.contentWindow?.postMessage({type:"play"},origin);}catch{}}else if(data.playback.provider==="YOUTUBE"){try{youtubePlayerRef.current?.seekTo?.(startSec,true);youtubePlayerRef.current?.playVideo?.();}catch{}}else if(muxRef.current){muxRef.current.currentTime=startSec;muxRef.current.play?.();}}
+  function seek(startSec:number){if(!data)return;if(data.playback.provider==="PANDA"){try{const origin=new URL(data.playback.playerUrl).origin;pandaRef.current?.contentWindow?.postMessage({type:"currentTime",parameter:startSec},origin);pandaRef.current?.contentWindow?.postMessage({type:"play"},origin);}catch{}}else if(data.playback.provider==="YOUTUBE"){try{youtubePlayerRef.current?.seekTo?.(startSec,true);youtubePlayerRef.current?.playVideo?.();}catch{}}else if(data.playback.provider==="VIMEO"){void vimeoPlayerRef.current?.setCurrentTime(startSec).then(()=>vimeoPlayerRef.current?.play()).catch(()=>{});}else if(muxRef.current){muxRef.current.currentTime=startSec;muxRef.current.play?.();}}
   async function takeover(){setTakingOver(true);try{await openPlayback(true);}finally{setTakingOver(false);}}
 
   if(error)return <div className="secure-error"><h2>{errorCode==="DEVICE_LIMIT"?"Limite de dispositivos":errorCode==="CONCURRENT_STREAM_LIMIT"?"Conta em uso":"Não foi possível reproduzir"}</h2><p><GoogleText>{error}</GoogleText></p>{conflict?.activeSessions?.map((session,index)=><div className="session-conflict" key={index}><strong>{session.deviceLabel||"Outro dispositivo"}</strong><span><GoogleText>{session.lessonTitle||"Vídeo em reprodução"}</GoogleText></span></div>)}<div className="actions" style={{justifyContent:"center"}}>{errorCode==="CONCURRENT_STREAM_LIMIT"&&<button className="btn btn-primary" onClick={takeover} disabled={takingOver}>{takingOver?"Encerrando outra sessão...":"Encerrar outra reprodução e continuar"}</button>}{errorCode==="DEVICE_LIMIT"&&<Link className="btn btn-primary" href="/account/security">Gerenciar dispositivos</Link>}<Link className="btn btn-secondary" href="/browse">Voltar para os cursos</Link></div></div>;
@@ -72,7 +115,7 @@ export default function SecurePlayer({ lessonId }: { lessonId: string }) {
   const allLessons=data.course.modules.flatMap(m=>m.lessons);
   return <main className="watch-shell"><header className="watch-top"><Link href={`/course/${data.course.slug}`}>← Voltar ao curso</Link><strong style={{marginLeft:"auto"}}><GoogleText>{data.lesson.title}</GoogleText></strong></header><div className="watch-grid"><section>
     <div className="secure-player-shell">
-      {data.playback.provider==="PANDA"?<iframe ref={pandaRef} src={data.playback.playerUrl} title={data.lesson.title} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowFullScreen style={{border:0,width:"100%",aspectRatio:"16 / 9",maxHeight:"78vh",display:"block"}}/>:data.playback.provider==="YOUTUBE"?<div className="youtube-player-shell"><div ref={youtubeHostRef}/></div>:<Suspense fallback={<div className="secure-loading">Carregando player protegido...</div>}><MuxPlayer
+      {data.playback.provider==="PANDA"?<iframe ref={pandaRef} src={data.playback.playerUrl} title={data.lesson.title} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowFullScreen style={{border:0,width:"100%",aspectRatio:"16 / 9",maxHeight:"78vh",display:"block"}}/>:data.playback.provider==="VIMEO"?<iframe ref={vimeoRef} src={data.playback.embedUrl} title={data.lesson.title} allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowFullScreen style={{border:0,width:"100%",aspectRatio:"16 / 9",maxHeight:"78vh",display:"block"}}/>:data.playback.provider==="YOUTUBE"?<div className="youtube-player-shell"><div ref={youtubeHostRef}/></div>:<Suspense fallback={<div className="secure-loading">Carregando player protegido...</div>}><MuxPlayer
         ref={muxRef}
         playbackId={data.playback.playbackId}
         tokens={{playback:data.playback.tokens.playback,drm:data.playback.tokens.drm}}

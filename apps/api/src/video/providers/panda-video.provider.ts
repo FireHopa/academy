@@ -84,6 +84,17 @@ export class PandaVideoProvider {
     return this.normalize(body);
   }
 
+  async fromUrl(input: string) {
+    const safe = this.safePandaPlayerUrl(input.trim());
+    const externalId = safe ? new URL(safe).searchParams.get("v") : null;
+    if (!safe || !this.validVideoId(externalId)) throw new BadRequestException("Cole uma URL de incorporação válida do Panda Video.");
+    // Player URLs carry the public external ID, not the API/library ID.
+    const body = await this.fetch<PandaVideo>(`/videos/${encodeURIComponent(externalId!)}?external_id`);
+    const video = this.normalize(body);
+    if (video.providerExternalId !== externalId) throw new BadRequestException("O Panda retornou um vídeo diferente do link informado.");
+    return video;
+  }
+
   async refreshByExternalOrInternal(id: string) {
     const normalizedId = id.trim();
     if (!this.validVideoId(normalizedId)) throw new BadRequestException("ID de vídeo Panda inválido");
@@ -221,7 +232,7 @@ export class PandaVideoProvider {
     if (!value) return null;
     try {
       const url = new URL(value);
-      if (url.protocol !== "https:" || url.username || url.password) return null;
+      if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
       return url.toString();
     } catch {
       return null;

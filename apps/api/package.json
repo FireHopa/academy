@@ -4,6 +4,7 @@
   "scripts": {
     "start:dev": "nest start --watch",
     "start:worker:dev": "nest start --watch --tsc --entryFile worker",
+    "prebuild": "prisma generate --schema ../../prisma/schema.prisma",
     "build": "nest build",
     "start": "node dist/main.js",
     "start:worker": "node dist/worker.js"

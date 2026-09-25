@@ -95,7 +95,9 @@ export type MaterialType = (typeof MaterialType)[keyof typeof MaterialType]
 
 export const VideoProvider = {
   PANDA: 'PANDA',
-  MUX: 'MUX'
+  MUX: 'MUX',
+  YOUTUBE: 'YOUTUBE',
+  VIMEO: 'VIMEO'
 } as const
 
 export type VideoProvider = (typeof VideoProvider)[keyof typeof VideoProvider]

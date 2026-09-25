@@ -1,0 +1,9 @@
+./CORRECAO-YOUTUBE-PRISMA.md
+./PATCH-MANIFEST.txt
+./apps/api/package.json
+./apps/api/src/generated/prisma/enums.ts
+./apps/api/src/generated/prisma/internal/class.ts
+./apps/api/test/youtube-video.test.ts
+./package.json
+./prisma/migrations/20260904190000_youtube_video_provider/migration.sql
+./prisma/schema.prisma

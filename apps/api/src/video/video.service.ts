@@ -15,6 +15,7 @@ import type { Request } from "express";
 import { PlaybackSessionService, type DeviceInput } from "./playback-session.service";
 import { PandaVideoProvider } from "./providers/panda-video.provider";
 import { MuxVideoProvider } from "./providers/mux-video.provider";
+import { VimeoVideoProvider, parseVimeoUrl } from "./providers/vimeo-video.provider";
 import { YoutubeVideoProvider } from "./providers/youtube-video.provider";
 import type { ProviderVideo } from "./providers/video-provider.types";
 import { academyManagedMuxMetadata, VideoAssetLifecycleService } from "./video-asset-lifecycle.service";
@@ -42,6 +43,7 @@ export class VideoService {
     private readonly mux: MuxVideoProvider,
     @Optional() private readonly lifecycle?: VideoAssetLifecycleService,
     @Optional() private readonly youtube?: YoutubeVideoProvider,
+    @Optional() private readonly vimeo?: VimeoVideoProvider,
   ) {}
 
   configuredProvider() {
@@ -55,6 +57,7 @@ export class VideoService {
       panda: this.panda.configurationStatus(),
       mux: { configured: this.mux.configured() },
       youtube: { enabled: Boolean(this.youtube) },
+      vimeo: { enabled: Boolean(this.vimeo) },
     };
   }
 
@@ -166,6 +169,26 @@ export class VideoService {
         videoPlaybackId: null,
       },
     });
+    return this.getAdminVideoStatus(lessonId);
+  }
+
+  async attachVideoUrl(lessonId: string, url: string) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, select: { id: true, videoResourceId: true } });
+    if (!lesson) throw new NotFoundException("Aula não encontrada");
+    let video: ProviderVideo;
+    if (parseVimeoUrl(url)) {
+      if (!this.vimeo) throw new ServiceUnavailableException("Integração Vimeo indisponível");
+      video = await this.vimeo.fromUrl(url);
+    } else {
+      video = await this.panda.fromUrl(url);
+    }
+    if (video.status !== "READY") throw new BadRequestException("O vídeo ainda não está pronto no provedor.");
+    const asset = await this.upsertVideoAsset(video);
+    await this.lifecycle?.markDetached([lesson.videoResourceId]);
+    await this.prisma.lesson.update({ where: { id: lessonId }, data: {
+      videoResourceId: asset.id, videoStatus: asset.status, videoError: null, durationSec: asset.durationSec,
+      videoUploadId: null, videoAssetId: null, videoPlaybackId: null,
+    } });
     return this.getAdminVideoStatus(lessonId);
   }
 
@@ -381,6 +404,9 @@ export class VideoService {
           error: lesson.videoResource.error,
           metadata: (lesson.videoResource.metadata as Record<string, unknown> | null) ?? null,
         }, identity, playbackSession.session.id);
+      } else if (lesson.videoResource?.provider === "VIMEO") {
+        if (!this.vimeo) throw new ServiceUnavailableException("Integração Vimeo indisponível");
+        playback = this.vimeo.buildPlayback(lesson.videoResource);
       } else if (lesson.videoResource?.provider === "YOUTUBE") {
         if (!this.youtube) throw new ServiceUnavailableException("Integração YouTube indisponível");
         playback = this.youtube.buildPlayback({

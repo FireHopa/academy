@@ -23,7 +23,7 @@ type Lesson = {
   videoPlaybackId?: string | null;
   videoStatus: "EMPTY" | "UPLOADING" | "PROCESSING" | "READY" | "ERROR";
   videoError?: string | null;
-  videoResource?: { id:string; provider:"PANDA"|"MUX"|"YOUTUBE"; providerAssetId:string; thumbnailUrl?:string|null; status?:string; durationSec?:number|null; error?:string|null } | null;
+  videoResource?: { id:string; provider:"PANDA"|"MUX"|"YOUTUBE"|"VIMEO"; providerAssetId:string; thumbnailUrl?:string|null; status?:string; durationSec?:number|null; error?:string|null } | null;
 };
 
 type CourseModule = {

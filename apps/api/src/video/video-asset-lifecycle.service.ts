@@ -88,6 +88,7 @@ export class VideoAssetLifecycleService {
       deletedRemote: 0,
       preservedPandaRemote: 0,
       preservedYoutubeRemote: 0,
+      preservedVimeoRemote: 0,
       manualReview: 0,
       deferred: 0,
       failed: 0,
@@ -95,12 +96,13 @@ export class VideoAssetLifecycleService {
     };
 
     for (const asset of assets) {
-      if (asset.provider === "PANDA" || asset.provider === "YOUTUBE") {
+      if (asset.provider === "PANDA" || asset.provider === "YOUTUBE" || asset.provider === "VIMEO") {
         const deleted = await this.deleteLocalIfStillOrphan(asset.id, cutoff);
         if (deleted) {
           result.deletedLocal += 1;
           if (asset.provider === "PANDA") result.preservedPandaRemote += 1;
-          else result.preservedYoutubeRemote += 1;
+          else if (asset.provider === "YOUTUBE") result.preservedYoutubeRemote += 1;
+          else result.preservedVimeoRemote += 1;
         } else {
           result.skippedRelinked += 1;
         }

@@ -1,0 +1,9 @@
+1f5c229316303f87e1343ecdea7758aff461d723745c4c3e5b050c43befd659c  ./CORRECAO-YOUTUBE-PRISMA.md
+c6e8b01b05e04a243b69ad723bf884ab28563c03f59924a0a3198efa205239c4  ./PATCH-MANIFEST.txt
+a78d44252fa9121f0622cb6a14b4c9ef4e3756efdf3b3809638c6bf7ce0aaba4  ./apps/api/package.json
+7cf26f3d0c11cc5a06b4d061fb6e0bf383bac4785415b940bb542db38182a3a8  ./apps/api/src/generated/prisma/enums.ts
+df267f4fce9fac197eceb977caa9e9ef8f8f22ba3592f990ff8632ad51cda062  ./apps/api/src/generated/prisma/internal/class.ts
+bcc997b30e387b43845172dff1f434e87da5dea6d38701c1ba89ce338bc1f375  ./apps/api/test/youtube-video.test.ts
+9537898c05902d8f6447fceecd5b50807c95bb3fad39479ca6b9eb5b12226f24  ./package.json
+faece6c39bc66317412f249fac9d74cd4c7c54ff75d4838149e041af3d7ee852  ./prisma/migrations/20260904190000_youtube_video_provider/migration.sql
+8eb1582f7fc07a4d95341526e12553f4cd0573cf9345d69d1a73b80ac5cd0ee1  ./prisma/schema.prisma
